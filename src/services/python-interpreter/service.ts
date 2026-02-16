@@ -150,7 +150,7 @@ export class PyodidePythonEnvironment implements PythonEnvironment {
      */
     listFilesRecursive(dir: string) {
         var files: any[] = [];
-        var entries = this.pyodide?.FS.readdir(dir);
+        var entries = this.pyodide!.FS.readdir(dir);
 
         for (var i = 0; i < entries.length; i++) {
             var entry = entries[i];
@@ -162,9 +162,9 @@ export class PyodidePythonEnvironment implements PythonEnvironment {
                 // Skip default files
                 continue;
             }
-            var fullPath = this.pyodide?.PATH.join2(dir, entry);
+            var fullPath = this.pyodide!.PATH.join2(dir, entry);
 
-            if (this.pyodide?.FS.isDir(this.pyodide.FS.stat(fullPath).mode)) {
+            if (this.pyodide!.FS.isDir(this.pyodide!.FS.stat(fullPath).mode)) {
                 // If it's a directory, recursively list files in that directory
                 files = files.concat(this.listFilesRecursive(fullPath));
             } else {
