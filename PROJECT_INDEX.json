@@ -1,0 +1,177 @@
+{
+  "project": {
+    "name": "terrarium",
+    "description": "Low-latency Python sandbox for executing untrusted user/LLM-generated code via Pyodide WASM",
+    "origin": "Cohere",
+    "license": "MIT",
+    "language": "TypeScript",
+    "runtime": "Node.js",
+    "generated": "2026-02-16"
+  },
+  "stats": {
+    "source_files": 4,
+    "total_loc": 465,
+    "test_files": 11,
+    "config_files": 4
+  },
+  "entry_points": {
+    "server": "src/index.ts",
+    "docker": "Dockerfile",
+    "test_runner": "example-clients/python/terrarium_client.py",
+    "ci": ".github/workflows/dockerize.yml"
+  },
+  "modules": [
+    {
+      "name": "index",
+      "path": "src/index.ts",
+      "loc": 72,
+      "exports": [],
+      "purpose": "Express HTTP server with routes, request locking, Pyodide lifecycle",
+      "symbols": ["pythonEnvironment", "terrariumApp", "runRequest", "server"]
+    },
+    {
+      "name": "python-interpreter/service",
+      "path": "src/services/python-interpreter/service.ts",
+      "loc": 293,
+      "exports": ["PyodidePythonEnvironment"],
+      "purpose": "Core sandbox: Pyodide WASM lifecycle, code execution, file I/O, recycling",
+      "symbols": [
+        "PyodidePythonEnvironment",
+        "prepareEnvironment",
+        "loadEnvironment",
+        "runCode",
+        "terminate",
+        "cleanup",
+        "listFilesRecursive",
+        "readFileAsBase64",
+        "bytesToBase64",
+        "base64ToBytes",
+        "readHostFileAsync",
+        "waitForReady",
+        "init"
+      ]
+    },
+    {
+      "name": "python-interpreter/types",
+      "path": "src/services/python-interpreter/types.ts",
+      "loc": 24,
+      "exports": ["CodeExecutionResponse", "FileData", "PythonEnvironment"],
+      "purpose": "TypeScript interfaces for sandbox API contract"
+    },
+    {
+      "name": "async-utils",
+      "path": "src/utils/async-utils.ts",
+      "loc": 76,
+      "exports": ["waitFor", "doWithLock"],
+      "purpose": "Promise-based timer and named async mutex"
+    }
+  ],
+  "api": {
+    "endpoints": [
+      {
+        "path": "/",
+        "method": "POST",
+        "purpose": "Execute Python code",
+        "request": {
+          "code": "string (required)",
+          "files": "[{filename: string, b64_data: string}] (optional)"
+        },
+        "response": {
+          "success": "boolean",
+          "final_expression": "any",
+          "output_files": "[{filename, b64_data}]",
+          "error": "{type, message}",
+          "std_out": "string",
+          "std_err": "string",
+          "code_runtime": "number (ms)"
+        }
+      },
+      {
+        "path": "/health",
+        "method": "GET",
+        "purpose": "Health check",
+        "response": "\"hi!\""
+      },
+      {
+        "path": "/stop",
+        "method": "GET",
+        "purpose": "Graceful shutdown (process.exit(1))"
+      }
+    ],
+    "port": 8080,
+    "body_limit": "100mb",
+    "concurrency": "1 request at a time per process (doWithLock)"
+  },
+  "dependencies": {
+    "runtime": {
+      "pyodide": "^0.29.3",
+      "express": "^4.19.2",
+      "typescript": "^5.9.3",
+      "@types/express": "^4.17.21",
+      "@types/node": "^20.11.30",
+      "clean": "^4.0.2"
+    },
+    "dev": {
+      "ts-node": "^10.9.2",
+      "nodemon": "^3.1.11",
+      "pm2": "^5.4.3",
+      "node-fetch": "^3.3.2"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "ts-node ./src/index.ts",
+    "dev": "nodemon src/index.ts",
+    "ci": "pm2 start src/index.ts --interpreter ts-node --exp-backoff-restart-delay=100 --name terrarium -i max"
+  },
+  "tests": {
+    "functionality": [
+      "tests/functionality/numpy_simple.py",
+      "tests/functionality/sympy_simple.py",
+      "tests/functionality/error_wrong_param.py",
+      "tests/functionality/error_syntax_error.py",
+      "tests/functionality/error_missing_import.py",
+      "tests/functionality/super_long_python_file.py"
+    ],
+    "security": [
+      "tests/security/subprocess.py",
+      "tests/security/create_dir.py",
+      "tests/security/list_dirs.py"
+    ],
+    "file_io": [
+      "tests/file_io/simple_matplotlib.py",
+      "tests/file_io/simple_matplotlib_barchart.py",
+      "tests/file_io/replay_inputs.py"
+    ],
+    "runner": "example-clients/python/terrarium_client.py",
+    "framework": "none (live server integration tests)"
+  },
+  "architecture": {
+    "pattern": "Single-process Express server with WASM-sandboxed Python execution",
+    "concurrency_model": "Request serialization via async lock; PM2 cluster for process-level parallelism",
+    "sandbox_layers": [
+      "Pyodide WASM: no FS, no network, no threading, no subprocess, no host memory",
+      "Docker container: runtime limits, network isolation"
+    ],
+    "lifecycle": [
+      "Startup: prepareEnvironment() + loadEnvironment() (pre-load numpy/matplotlib/pandas)",
+      "Request: doWithLock → waitForReady → runCode → write response",
+      "Recycle: terminate() (interrupt flag) → cleanup() → loadEnvironment() (full rebuild)",
+      "Response: write before recycle, end after (keeps GCP CPU alive)"
+    ]
+  },
+  "docker": {
+    "base": "node:21-alpine3.18",
+    "entrypoint": ["ts-node", "src/index.ts"],
+    "port": 8080,
+    "healthcheck": "curl /health || kill 1 (1s interval, 10s timeout, 2 retries)",
+    "env": { "ENV_RUN_AS": "docker" }
+  },
+  "ci": {
+    "platform": "GitHub Actions",
+    "workflow": ".github/workflows/dockerize.yml",
+    "trigger": "push to main / manual dispatch",
+    "registry": "ghcr.io",
+    "platforms": ["linux/amd64", "linux/arm64"]
+  }
+}

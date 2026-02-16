@@ -1,0 +1,12 @@
+node_modules
+dist
+.git
+.github
+.claude
+.serena
+tests
+example-clients
+PROJECT_INDEX.md
+PROJECT_INDEX.json
+*.md
+!default_python_home/README.md

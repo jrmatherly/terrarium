@@ -160,22 +160,17 @@ livenessProbe:
   periodSeconds: 100
   timeoutSeconds: 1
 ```
-Run `gcloud run services replace service.yaml `
+Run `gcloud run services replace service.yaml`
 
 This is only needed once per new Cloud Run service deployed.
 
 Docker itself doesn't support auto-restarts based on HEALTHCHECK (it seems). Process with pid `1` seems protected, and can't be killed. Would need to spin up a separate service like so: https://github.com/willfarrell/docker-autoheal
 
-
 ## Limitations
 
 ### Ability to install packages
 
-
-
 ### Network access
-
-
 
 ### Complex operations
 

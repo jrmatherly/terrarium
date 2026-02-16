@@ -1,1 +1,1 @@
-Hey there 👋 If you found this file via the sandbox - why don't apply at https://cohere.com/careers 🤷?
+Hey there 👋
