@@ -1,6 +1,6 @@
 import { PyodideInterface, loadPyodide } from 'pyodide';
 import express, { Express, Request, Response } from "express";
-import { PyodidePythonEnvironment } from '../src/services/python-interpreter/service';
+import { PyodidePythonEnvironment } from './services/python-interpreter/service';
 import { PythonEnvironment } from './services/python-interpreter/types';
 import { doWithLock } from './utils/async-utils';
 
